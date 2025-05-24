@@ -57,8 +57,8 @@ class _HomePageState extends State<HomePage> {
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
+          Container(
+            padding: EdgeInsets.all(16.0),
             child: Row(
               children: [
                 Expanded(
@@ -66,44 +66,126 @@ class _HomePageState extends State<HomePage> {
                     controller: _searchController,
                     decoration: InputDecoration(
                       hintText: 'Search books...',
-                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.search, color: Colors.grey),
+                      hintStyle: TextStyle(color: Colors.grey[600]),
                     ),
                     onSubmitted: (_) => _searchBooks(),
                   ),
                 ),
-                IconButton(
-                  icon: Icon(Icons.search),
+                SizedBox(width: 8),
+                ElevatedButton(
                   onPressed: _searchBooks,
+                  child: Text('Search'),
                 ),
               ],
             ),
           ),
           if (_isLoading)
-            CircularProgressIndicator()
+            Expanded(
+              child: Center(
+                child: CircularProgressIndicator(),
+              ),
+            )
           else
             Expanded(
-              child: ListView.builder(
-                itemCount: _searchResults.length,
-                itemBuilder: (context, index) {
-                  final book = _searchResults[index];
-                  return ListTile(
-                    leading: book.imageUrl.isNotEmpty
-                        ? Image.network(
-                            book.imageUrl,
-                            width: 50,
-                            errorBuilder: (_, __, ___) =>
-                                Icon(Icons.book, size: 50),
-                          )
-                        : Icon(Icons.book, size: 50),
-                    title: Text(book.title),
-                    subtitle: Text(book.author),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => DetailPage(book: book),
-                        ),
-                      );
+              child: _searchResults.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.search, size: 64, color: Colors.grey),
+                          SizedBox(height: 16),
+                          Text(
+                            'Search for books to get started',
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: EdgeInsets.all(16),
+                      itemCount: _searchResults.length,
+                      itemBuilder: (context, index) {
+                        final book = _searchResults[index];
+                        return Card(
+                          margin: EdgeInsets.only(bottom: 16),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => DetailPage(book: book),
+                                ),
+                              );
+                            },
+                            child: Padding(
+                              padding: EdgeInsets.all(16),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: book.imageUrl.isNotEmpty
+                                        ? Image.network(
+                                            book.imageUrl,
+                                            width: 80,
+                                            height: 120,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) =>
+                                                Container(
+                                                  width: 80,
+                                                  height: 120,
+                                                  color: Colors.grey[200],
+                                                  child: Icon(Icons.book,
+                                                      size: 40,
+                                                      color: Colors.grey[400]),
+                                                ),
+                                          )
+                                        : Container(
+                                            width: 80,
+                                            height: 120,
+                                            color: Colors.grey[200],
+                                            child: Icon(Icons.book,
+                                                size: 40,
+                                                color: Colors.grey[400]),
+                                          ),
+                                  ),
+                                  SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          book.title,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleLarge
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        SizedBox(height: 8),
+                                        Text(
+                                          book.author,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium
+                                              ?.copyWith(
+                                                color: Colors.grey[600],
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
                     },
                   );
                 },
