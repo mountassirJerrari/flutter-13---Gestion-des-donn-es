@@ -1,41 +1,19 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../blocs/book/book_bloc.dart';
+import '../blocs/book/book_event.dart';
+import '../blocs/book/book_state.dart';
 import '../models/book.dart';
 import 'detailpage.dart';
 import 'favoritespage.dart';
 
-class HomePage extends StatefulWidget {
-  @override
-  _HomePageState createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
+class HomePage extends StatelessWidget {
   final _searchController = TextEditingController();
-  final _apiService = ApiService();
-  List<Book> _searchResults = [];
-  bool _isLoading = false;
 
-  void _searchBooks() async {
+  void _searchBooks(BuildContext context) {
     if (_searchController.text.isEmpty) return;
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final results = await _apiService.searchBooks(_searchController.text);
-      setState(() {
-        _searchResults = results;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error searching books: $e')),
-      );
-    }
+    context.read<BookBloc>().add(SearchBooks(_searchController.text));
   }
 
   @override
@@ -69,128 +47,173 @@ class _HomePageState extends State<HomePage> {
                       prefixIcon: Icon(Icons.search, color: Colors.grey),
                       hintStyle: TextStyle(color: Colors.grey[600]),
                     ),
-                    onSubmitted: (_) => _searchBooks(),
+                    onSubmitted: (_) => _searchBooks(context),
                   ),
                 ),
                 SizedBox(width: 8),
                 ElevatedButton(
-                  onPressed: _searchBooks,
+                  onPressed: () => _searchBooks(context),
                   child: Text('Search'),
                 ),
               ],
             ),
           ),
-          if (_isLoading)
-            Expanded(
-              child: Center(
-                child: CircularProgressIndicator(),
-              ),
-            )
-          else
-            Expanded(
-              child: _searchResults.isEmpty
-                  ? Center(
+          Expanded(
+            child: BlocBuilder<BookBloc, BookState>(
+              builder: (context, state) {
+                if (state is BookSearchLoading) {
+                  return Center(child: CircularProgressIndicator());
+                }
+                
+                if (state is BookSearchError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline, size: 64, color: Colors.red),
+                        SizedBox(height: 16),
+                        Text(
+                          'Error: ${state.message}',
+                          style: TextStyle(color: Colors.red),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                
+                if (state is BookSearchSuccess) {
+                  if (state.books.isEmpty) {
+                    return Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.search, size: 64, color: Colors.grey),
+                          Icon(Icons.search_off, size: 64, color: Colors.grey),
                           SizedBox(height: 16),
                           Text(
-                            'Search for books to get started',
+                            'No books found',
                             style: TextStyle(color: Colors.grey[600]),
                           ),
                         ],
                       ),
-                    )
-                  : ListView.builder(
-                      padding: EdgeInsets.all(16),
-                      itemCount: _searchResults.length,
-                      itemBuilder: (context, index) {
-                        final book = _searchResults[index];
-                        return Card(
-                          margin: EdgeInsets.only(bottom: 16),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => DetailPage(book: book),
-                                ),
-                              );
-                            },
-                            child: Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: book.imageUrl.isNotEmpty
-                                        ? Image.network(
-                                            book.imageUrl,
-                                            width: 80,
-                                            height: 120,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) =>
-                                                Container(
-                                                  width: 80,
-                                                  height: 120,
-                                                  color: Colors.grey[200],
-                                                  child: Icon(Icons.book,
-                                                      size: 40,
-                                                      color: Colors.grey[400]),
-                                                ),
-                                          )
-                                        : Container(
+                    );
+                  }
+                  
+                  return ListView.builder(
+                    padding: EdgeInsets.all(16),
+                    itemCount: state.books.length,
+                    itemBuilder: (context, index) {
+                      final book = state.books[index];
+                      return Card(
+                        margin: EdgeInsets.only(bottom: 16),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => DetailPage(book: book),
+                              ),
+                            );
+                          },
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: book.imageUrl.isNotEmpty
+                                      ? CachedNetworkImage(
+                                          imageUrl: book.imageUrl,
+                                          width: 80,
+                                          height: 120,
+                                          fit: BoxFit.cover,
+                                          placeholder: (context, url) => Container(
                                             width: 80,
                                             height: 120,
                                             color: Colors.grey[200],
-                                            child: Icon(Icons.book,
-                                                size: 40,
-                                                color: Colors.grey[400]),
+                                            child: Center(
+                                              child: CircularProgressIndicator(),
+                                            ),
                                           ),
-                                  ),
-                                  SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          book.title,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleLarge
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.bold,
+                                          errorWidget: (context, url, error) =>
+                                              Container(
+                                                width: 80,
+                                                height: 120,
+                                                color: Colors.grey[200],
+                                                child: Icon(
+                                                  Icons.book,
+                                                  size: 40,
+                                                  color: Colors.grey[400],
+                                                ),
                                               ),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
+                                        )
+                                      : Container(
+                                          width: 80,
+                                          height: 120,
+                                          color: Colors.grey[200],
+                                          child: Icon(
+                                            Icons.book,
+                                            size: 40,
+                                            color: Colors.grey[400],
+                                          ),
                                         ),
-                                        SizedBox(height: 8),
-                                        Text(
-                                          book.author,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleMedium
-                                              ?.copyWith(
-                                                color: Colors.grey[600],
-                                              ),
-                                        ),
-                                      ],
-                                    ),
+                                ),
+                                SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        book.title,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleLarge
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        book.author,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium
+                                            ?.copyWith(
+                                              color: Colors.grey[600],
+                                            ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
-                        );
+                        ),
+                      );
                     },
                   );
-                },
-              ),
+                }
+                
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.search, size: 64, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text(
+                        'Search for books to get started',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
+          ),
         ],
       ),
     );
