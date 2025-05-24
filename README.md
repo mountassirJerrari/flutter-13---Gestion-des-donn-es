@@ -115,8 +115,6 @@ Ce projet a été développé dans un cadre éducatif. Les contributions et sugg
 4. Mode hors ligne amélioré
 5. Synchronisation cloud des favoris
 
-## 👨‍💻 Auteur
-[Votre Nom]
 
 ## 📄 Licence
 Ce projet est réalisé dans le cadre d'un cours et est soumis aux règles de propriété intellectuelle de l'établissement.
